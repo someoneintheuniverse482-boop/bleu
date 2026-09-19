@@ -1,0 +1,1492 @@
+<!DOCTYPE html>
+<html lang="en" class="h-full dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OPERATION LAFAYETTE - Tactical Command Terminal</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;800;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        lafayette: {
+                            red: '#ff2a00',
+                            glow: '#ff5500',
+                            amber: '#ffaa00',
+                            cyan: '#00f0ff',
+                            dark: '#050811',
+                            panel: 'rgba(12, 18, 34, 0.85)',
+                            border: '#ff330044',
+                            blueprint: '#00bfff'
+                        }
+                    },
+                    fontFamily: {
+                        mono: ['"Share Tech Mono"', 'monospace'],
+                        title: ['Orbitron', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #03050a;
+            color: #e0e6ed;
+            font-family: 'Share Tech Mono', monospace;
+            overflow-x: hidden;
+            user-select: none;
+        }
+
+        /* Scanlines Overlay */
+        .scanlines {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            background: linear-gradient(
+                rgba(18, 16, 16, 0) 50%, 
+                rgba(0, 0, 0, 0.25) 50%
+            ), linear-gradient(
+                90deg,
+                rgba(255, 0, 0, 0.03),
+                rgba(0, 255, 0, 0.01),
+                rgba(0, 0, 255, 0.03)
+            );
+            background-size: 100% 4px, 6px 100%;
+            z-index: 90;
+        }
+
+        /* Vignette Effect */
+        .vignette {
+            position: fixed;
+            top: 0; left: 0; width: 100vw; height: 100vh;
+            pointer-events: none;
+            background: radial-gradient(circle, transparent 60%, rgba(0,0,0,0.85) 100%);
+            z-index: 89;
+        }
+
+        .glow-red-text {
+            text-shadow: 0 0 10px rgba(255, 42, 0, 0.8), 0 0 20px rgba(255, 42, 0, 0.4);
+        }
+
+        .glow-cyan-text {
+            text-shadow: 0 0 10px rgba(0, 240, 255, 0.8), 0 0 20px rgba(0, 240, 255, 0.4);
+        }
+
+        .border-glow {
+            box-shadow: 0 0 15px rgba(255, 42, 0, 0.25), inset 0 0 15px rgba(255, 42, 0, 0.15);
+        }
+
+        .cyber-card {
+            background: rgba(10, 15, 28, 0.85);
+            border: 1px solid rgba(255, 68, 0, 0.3);
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        .cyber-card::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 8px; height: 8px;
+            border-top: 2px solid #ff3300;
+            border-left: 2px solid #ff3300;
+        }
+
+        .cyber-card::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 8px; height: 8px;
+            border-bottom: 2px solid #ff3300;
+            border-right: 2px solid #ff3300;
+        }
+
+        /* Blueprint Card Theme Accent */
+        .blueprint-card {
+            background: rgba(3, 18, 36, 0.85);
+            border: 1px solid rgba(0, 240, 255, 0.3);
+            backdrop-filter: blur(8px);
+            position: relative;
+        }
+
+        .blueprint-card::before {
+            content: '';
+            position: absolute;
+            top: -1px; left: -1px;
+            width: 8px; height: 8px;
+            border-top: 2px solid #00f0ff;
+            border-left: 2px solid #00f0ff;
+        }
+
+        .blueprint-card::after {
+            content: '';
+            position: absolute;
+            bottom: -1px; right: -1px;
+            width: 8px; height: 8px;
+            border-bottom: 2px solid #00f0ff;
+            border-right: 2px solid #00f0ff;
+        }
+
+        /* Stamp animation for TERMINATED */
+        @keyframes stampAnim {
+            0% { transform: scale(3) rotate(-12deg); opacity: 0; }
+            50% { transform: scale(0.9) rotate(-12deg); opacity: 1; }
+            70% { transform: scale(1.05) rotate(-12deg); }
+            100% { transform: scale(1) rotate(-12deg); opacity: 0.92; }
+        }
+
+        .terminated-stamp {
+            animation: stampAnim 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            border: 5px solid #ff0033;
+            color: #ff0033;
+            text-shadow: 0 0 15px #ff0033;
+            box-shadow: 0 0 20px rgba(255, 0, 51, 0.6), inset 0 0 20px rgba(255, 0, 51, 0.4);
+        }
+
+        /* Alarm flashing screen */
+        .alarm-mode {
+            animation: alarmFlash 1s infinite alternate;
+        }
+
+        @keyframes alarmFlash {
+            from { background-color: #03050a; }
+            to { background-color: #2b0303; }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #060a12;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #ff330088;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #ff3300;
+        }
+    </style>
+</head>
+<body class="h-full flex flex-col justify-between overflow-x-hidden select-none" id="app-body">
+    <div class="scanlines"></div>
+    <div class="vignette"></div>
+
+    <!-- 1ST GATE: Password / Login Screen -->
+    <div id="login-screen" class="fixed inset-0 z-50 bg-[#030611] flex flex-col items-center justify-center p-4">
+        <div class="w-full max-w-md cyber-card p-8 rounded-lg border border-lafayette-red/50 shadow-2xl flex flex-col items-center">
+            <div class="w-20 h-20 mb-4 text-lafayette-red flex items-center justify-center relative">
+                <i class="ph-bold ph-aperture text-7xl animate-spin" style="animation-duration: 20s;"></i>
+                <i class="ph-bold ph-skull text-3xl absolute"></i>
+            </div>
+            
+            <h1 class="font-title text-3xl font-black text-center text-lafayette-red tracking-wider glow-red-text mb-1">
+                OPERATION LAFAYETTE
+            </h1>
+            <p class="text-xs text-lafayette-cyan font-mono mb-6 tracking-widest text-center uppercase">
+                [ FIRST GATE // MAIN TERMINAL CLEARANCE ]
+            </p>
+
+            <div class="w-full space-y-4">
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 uppercase font-mono">Terminal Access Key</label>
+                    <div class="relative">
+                        <input type="password" id="password-input" placeholder="ENTER ACCESS CODE..." 
+                            class="w-full bg-black/80 border border-lafayette-red/60 text-lafayette-amber px-4 py-3 rounded text-center text-xl font-mono tracking-widest focus:outline-none focus:border-lafayette-red focus:ring-1 focus:ring-lafayette-red uppercase placeholder-gray-700">
+                        <i class="ph-bold ph-key absolute right-3 top-3.5 text-lafayette-red/60 text-xl"></i>
+                    </div>
+                </div>
+
+                <button id="login-btn" class="w-full bg-lafayette-red/20 hover:bg-lafayette-red/40 border border-lafayette-red text-lafayette-red font-title py-3 rounded tracking-wider uppercase font-bold transition-all duration-200 hover:shadow-[0_0_15px_rgba(255,42,0,0.5)] active:scale-95 flex items-center justify-center gap-2">
+                    <i class="ph-bold ph-shield-check"></i> Authenticate Command
+                </button>
+
+                <div id="login-error" class="hidden text-red-500 text-xs text-center font-mono animate-pulse bg-red-950/40 p-2 rounded border border-red-800">
+                    <i class="ph-bold ph-warning"></i> ACCESS DENIED: INVALID SECURITY PASSPHRASE
+                </div>
+
+                <div class="text-center pt-2">
+                    <span class="text-[10px] text-gray-500 font-mono">SECURITY PROTOCOL: ENCRYPTED CLEARANCE REQUIRED</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Command Interface (Hidden until 1st gate passed) -->
+    <div id="main-terminal" class="hidden flex-col min-h-screen">
+        <!-- Top Status Bar -->
+        <header class="border-b border-lafayette-red/30 bg-black/80 backdrop-blur px-4 py-2 flex flex-wrap items-center justify-between gap-4 sticky top-0 z-40">
+            <div class="flex items-center gap-3">
+                <div class="w-9 h-9 border border-lafayette-red/60 rounded flex items-center justify-center bg-lafayette-red/10 text-lafayette-red">
+                    <i class="ph-bold ph-radar text-2xl animate-spin" style="animation-duration: 8s;"></i>
+                </div>
+                <div>
+                    <h1 class="font-title text-xl font-black text-lafayette-red tracking-wider leading-none glow-red-text">
+                        OPERATION LAFAYETTE
+                    </h1>
+                    <div class="text-[11px] text-lafayette-cyan font-mono flex items-center gap-2 mt-0.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                        TERMINAL ACTIVE // SECURE MESH v9.4.1
+                    </div>
+                </div>
+            </div>
+
+            <!-- Master Countdown Header Banner -->
+            <div class="flex items-center gap-2 bg-lafayette-red/10 border border-lafayette-red/40 px-4 py-1.5 rounded">
+                <i class="ph-bold ph-timer text-lafayette-amber text-xl animate-pulse"></i>
+                <span class="text-xs text-gray-400 font-mono uppercase hidden sm:inline">GLOBAL INITIATION:</span>
+                <span id="header-countdown" class="font-title text-xl font-bold text-lafayette-amber tracking-widest glow-cyan-text">
+                    12d 00h 00m 00s
+                </span>
+            </div>
+
+            <!-- Header Utility Actions -->
+            <div class="flex items-center gap-2">
+                <button id="sound-toggle-btn" title="Toggle Audio Synth" class="p-2 border border-lafayette-red/40 text-lafayette-cyan bg-black/50 hover:bg-lafayette-red/20 rounded transition">
+                    <i class="ph-bold ph-speaker-high text-lg" id="sound-icon"></i>
+                </button>
+                
+                <!-- 2nd Gate Trigger -->
+                <button id="admin-trigger-btn" class="px-3 py-1.5 bg-lafayette-amber/20 hover:bg-lafayette-amber/30 border border-lafayette-amber text-lafayette-amber font-title text-xs font-bold rounded flex items-center gap-1.5 transition shadow-[0_0_10px_rgba(255,170,0,0.2)]">
+                    <i class="ph-bold ph-lock-key text-sm" id="admin-lock-icon"></i>
+                    <span id="admin-btn-label">ADMIN PANEL</span>
+                </button>
+
+                <button id="logout-btn" title="Lock Terminal" class="p-2 border border-red-600/40 text-red-400 bg-red-950/20 hover:bg-red-900/40 rounded transition">
+                    <i class="ph-bold ph-power text-lg"></i>
+                </button>
+            </div>
+        </header>
+
+        <!-- Main Application Layout -->
+        <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
+            <!-- Sidebar Navigation -->
+            <nav class="w-full md:w-64 border-b md:border-b-0 md:border-r border-lafayette-red/30 bg-black/60 p-3 flex flex-row md:flex-col gap-2 overflow-x-auto shrink-0">
+                <button data-tab="tab-overview" class="nav-btn active flex items-center gap-3 px-4 py-3 rounded border border-lafayette-red/60 bg-lafayette-red/20 text-lafayette-red font-title text-xs font-bold tracking-wider hover:bg-lafayette-red/30 transition text-left shrink-0">
+                    <i class="ph-bold ph-globe text-lg"></i> OVERVIEW & COUNTDOWN
+                </button>
+                <button data-tab="tab-blueprints" class="nav-btn flex items-center gap-3 px-4 py-3 rounded border border-transparent text-gray-400 font-title text-xs font-bold tracking-wider hover:border-lafayette-cyan/60 hover:text-lafayette-cyan transition text-left shrink-0">
+                    <i class="ph-bold ph-blueprint text-lg text-lafayette-cyan"></i> BLUEPRINTS & CAD
+                </button>
+                <button data-tab="tab-arsenal" class="nav-btn flex items-center gap-3 px-4 py-3 rounded border border-transparent text-gray-400 font-title text-xs font-bold tracking-wider hover:border-lafayette-red/30 hover:text-lafayette-red transition text-left shrink-0">
+                    <i class="ph-bold ph-atom text-lg"></i> CLASSIFIED ARSENAL
+                </button>
+                <button data-tab="tab-subjects" class="nav-btn flex items-center gap-3 px-4 py-3 rounded border border-transparent text-gray-400 font-title text-xs font-bold tracking-wider hover:border-lafayette-red/30 hover:text-lafayette-red transition text-left shrink-0">
+                    <i class="ph-bold ph-skull text-lg"></i> SUBJECT DOSSIERS
+                </button>
+                <button data-tab="tab-financials" class="nav-btn flex items-center gap-3 px-4 py-3 rounded border border-transparent text-gray-400 font-title text-xs font-bold tracking-wider hover:border-lafayette-red/30 hover:text-lafayette-red transition text-left shrink-0">
+                    <i class="ph-bold ph-currency-dollar text-lg"></i> FINANCIAL ALLOCATION
+                </button>
+
+                <div class="hidden md:flex flex-col mt-auto p-3 cyber-card rounded border border-lafayette-red/20">
+                    <div class="text-[10px] text-gray-400 uppercase font-mono mb-1">Threat Status Level</div>
+                    <div id="threat-level-badge" class="font-title text-sm font-bold text-red-500 flex items-center gap-2">
+                        <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                        CODE RED: MAXIMUM
+                    </div>
+                    <div class="text-[9px] text-gray-500 font-mono mt-2">SYS_NODE: LAFAYETTE_PRIME</div>
+                </div>
+            </nav>
+
+            <!-- Main Content Container -->
+            <main class="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+
+                <!-- TAB 1: OVERVIEW & COUNTDOWN -->
+                <section id="tab-overview" class="tab-content space-y-6">
+                    <!-- Giant Countdown Timer Display -->
+                    <div class="cyber-card p-6 md:p-8 rounded-lg text-center border-glow">
+                        <div class="text-xs text-lafayette-cyan font-mono tracking-widest uppercase mb-2">
+                            [ GLOBAL DISRUPTION PROTOCOL COUNTDOWN ]
+                        </div>
+                        <h2 class="font-title text-2xl md:text-4xl font-extrabold text-lafayette-red tracking-wider uppercase mb-6 glow-red-text">
+                            TIME REMAINING UNTIL PHASE IV LAUNCH
+                        </h2>
+
+                        <!-- Large Digital Numbers Grid -->
+                        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto mb-6">
+                            <div class="bg-black/80 border border-lafayette-red/50 p-4 rounded text-center">
+                                <div id="cnt-days" class="font-title text-4xl sm:text-5xl font-black text-lafayette-amber">12</div>
+                                <div class="text-xs text-gray-400 font-mono mt-1">DAYS</div>
+                            </div>
+                            <div class="bg-black/80 border border-lafayette-red/50 p-4 rounded text-center">
+                                <div id="cnt-hours" class="font-title text-4xl sm:text-5xl font-black text-lafayette-amber">00</div>
+                                <div class="text-xs text-gray-400 font-mono mt-1">HOURS</div>
+                            </div>
+                            <div class="bg-black/80 border border-lafayette-red/50 p-4 rounded text-center">
+                                <div id="cnt-mins" class="font-title text-4xl sm:text-5xl font-black text-lafayette-amber">00</div>
+                                <div class="text-xs text-gray-400 font-mono mt-1">MINUTES</div>
+                            </div>
+                            <div class="bg-black/80 border border-lafayette-red/50 p-4 rounded text-center">
+                                <div id="cnt-secs" class="font-title text-4xl sm:text-5xl font-black text-lafayette-amber">00</div>
+                                <div class="text-xs text-gray-400 font-mono mt-1">SECONDS</div>
+                            </div>
+                        </div>
+
+                        <div class="inline-flex items-center gap-2 bg-red-950/50 border border-red-600/60 px-4 py-2 rounded text-red-400 text-xs font-mono">
+                            <i class="ph-bold ph-warning-octagon text-lg"></i>
+                            ALL ARSENAL UNITS PREPARING FOR AUTOMATED OVERRIDE DEPLOYMENT
+                        </div>
+                    </div>
+
+                    <!-- Tactical Map & Logs Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left 2 Cols: World Tactical Map Canvas -->
+                        <div class="lg:col-span-2 cyber-card p-4 rounded-lg flex flex-col">
+                            <div class="flex items-center justify-between mb-3 border-b border-lafayette-red/20 pb-2">
+                                <div class="font-title text-sm text-lafayette-cyan flex items-center gap-2">
+                                    <i class="ph-bold ph-crosshair text-lafayette-red"></i> GLOBAL SWARM DEPLOYMENT SITES
+                                </div>
+                                <span class="text-[10px] text-gray-400 font-mono">ACTIVE SATELLITE FEED</span>
+                            </div>
+                            <div class="relative w-full h-64 md:h-80 bg-black/90 rounded border border-lafayette-red/30 overflow-hidden">
+                                <canvas id="global-map-canvas" class="w-full h-full block"></canvas>
+                                <div class="absolute bottom-2 left-2 bg-black/80 p-2 rounded text-[10px] font-mono text-gray-400 border border-gray-800">
+                                    <div>SECTORS COVERED: 100%</div>
+                                    <div>ACTIVE DRONES: <span id="overview-drone-count" class="text-lafayette-cyan">14,250</span></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Right 1 Col: Live System Activity Log -->
+                        <div class="cyber-card p-4 rounded-lg flex flex-col">
+                            <div class="font-title text-sm text-lafayette-cyan flex items-center gap-2 mb-3 border-b border-lafayette-red/20 pb-2">
+                                <i class="ph-bold ph-terminal-window text-lafayette-red"></i> SYSTEM TELEMETRY LOG
+                            </div>
+                            <div id="telemetry-log" class="flex-1 space-y-2 text-[11px] font-mono overflow-y-auto max-h-72 pr-1">
+                                <!-- Dynamic entries via JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 2: TECHNICAL BLUEPRINTS & CAD SCHEMATICS -->
+                <section id="tab-blueprints" class="tab-content hidden space-y-6">
+                    <div class="border-b border-lafayette-cyan/30 pb-3 flex flex-wrap items-center justify-between gap-2">
+                        <div>
+                            <h2 class="font-title text-xl text-lafayette-cyan font-bold tracking-wider uppercase flex items-center gap-2">
+                                <i class="ph-bold ph-blueprint"></i> CLASSIFIED SCHEMATICS & BLUEPRINTS
+                            </h2>
+                            <p class="text-xs text-gray-400 font-mono">VECTOR ARCHITECTURE // SYSTEM SUB-COMPONENT BREAKDOWN</p>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            <span class="text-[10px] font-mono text-lafayette-cyan bg-cyan-950/60 border border-cyan-800 px-3 py-1 rounded flex items-center gap-2">
+                                <span class="w-2 h-2 rounded-full bg-cyan-400 animate-ping"></span>
+                                CAD ENGINE ONLINE
+                            </span>
+                        </div>
+                    </div>
+
+                    <!-- Blueprint Viewer Toolbar & Main Grid -->
+                    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                        <!-- Left Controls & Selection Drawer -->
+                        <div class="lg:col-span-1 space-y-4">
+                            <!-- Schematic Selection List -->
+                            <div class="blueprint-card p-4 rounded-lg space-y-3">
+                                <div class="text-xs font-title text-lafayette-cyan uppercase tracking-wider border-b border-lafayette-cyan/30 pb-2 flex items-center justify-between">
+                                    <span>SELECT SCHEMATIC</span>
+                                    <i class="ph-bold ph-folders"></i>
+                                </div>
+                                <div id="blueprint-selector-container" class="space-y-2">
+                                    <!-- Dynamic blueprint buttons -->
+                                </div>
+                            </div>
+
+                            <!-- Interactive Controls -->
+                            <div class="blueprint-card p-4 rounded-lg space-y-3">
+                                <div class="text-xs font-title text-lafayette-cyan uppercase tracking-wider border-b border-lafayette-cyan/30 pb-2">
+                                    CAD ENGINE CONTROLS
+                                </div>
+                                <div class="grid grid-cols-2 gap-2">
+                                    <button id="cad-zoom-in" class="px-3 py-2 bg-cyan-950/50 border border-cyan-500/50 hover:bg-cyan-900/50 text-cyan-300 text-xs font-mono rounded flex items-center justify-center gap-1">
+                                        <i class="ph-bold ph-magnifying-glass-plus"></i> ZOOM +
+                                    </button>
+                                    <button id="cad-zoom-out" class="px-3 py-2 bg-cyan-950/50 border border-cyan-500/50 hover:bg-cyan-900/50 text-cyan-300 text-xs font-mono rounded flex items-center justify-center gap-1">
+                                        <i class="ph-bold ph-magnifying-glass-minus"></i> ZOOM -
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-300 font-mono pt-1">
+                                    <span>ROTATION:</span>
+                                    <button id="cad-toggle-rotate" class="px-2 py-1 bg-cyan-900/40 border border-cyan-500/40 text-cyan-400 rounded text-[10px]">
+                                        AUTO-ROTATE: ON
+                                    </button>
+                                </div>
+                                <div class="flex items-center justify-between text-xs text-gray-300 font-mono">
+                                    <span>RENDER MODE:</span>
+                                    <button id="cad-toggle-wireframe" class="px-2 py-1 bg-cyan-900/40 border border-cyan-500/40 text-cyan-400 rounded text-[10px]">
+                                        WIREFRAME
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Main Blueprint Canvas Container -->
+                        <div class="lg:col-span-3 blueprint-card p-4 rounded-lg flex flex-col h-[500px] relative overflow-hidden">
+                            <div class="flex items-center justify-between mb-2">
+                                <div id="cad-title-display" class="font-title text-sm text-lafayette-cyan uppercase tracking-widest font-bold">
+                                    MODEL: LAFAYETTE APEX SWARM DRONE v4
+                                </div>
+                                <div class="text-[10px] font-mono text-cyan-400">3D VECTOR SCHEMATIC VIEW</div>
+                            </div>
+                            
+                            <!-- Interactive CAD Canvas -->
+                            <div class="flex-1 relative bg-black/90 border border-cyan-500/40 rounded overflow-hidden cursor-move">
+                                <canvas id="blueprint-canvas" class="w-full h-full block"></canvas>
+                                <div class="absolute top-3 left-3 text-[10px] font-mono text-cyan-400/80 bg-black/60 p-2 rounded border border-cyan-900/50">
+                                    <div>GRID: 1:50 SCALE</div>
+                                    <div>ROTATION: <span id="cad-deg-readout">0°</span></div>
+                                    <div>ZOOM: <span id="cad-zoom-readout">100%</span></div>
+                                </div>
+                                <div id="cad-specs-callout" class="absolute bottom-3 right-3 text-[11px] font-mono text-cyan-300 bg-black/80 p-3 rounded border border-cyan-500/60 max-w-xs shadow-lg">
+                                    <!-- Dynamic spec details -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- TAB 3: CLASSIFIED ARSENAL -->
+                <section id="tab-arsenal" class="tab-content hidden space-y-6">
+                    <div class="border-b border-lafayette-red/30 pb-3 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="font-title text-xl text-lafayette-red font-bold tracking-wider uppercase flex items-center gap-2">
+                                <i class="ph-bold ph-atom"></i> CLASSIFIED ARSENAL & HARDWARE MATRIX
+                            </h2>
+                            <p class="text-xs text-gray-400 font-mono">TACTICAL HARDWARE STATUS & OVERRIDE DEPLOYMENT</p>
+                        </div>
+                        
+                        <!-- Search & Filter Controls -->
+                        <div class="flex items-center gap-2">
+                            <input type="text" id="arsenal-search" placeholder="Filter arsenal..." 
+                                class="bg-black/80 border border-lafayette-red/40 px-3 py-1.5 rounded text-xs text-lafayette-amber font-mono focus:outline-none focus:border-lafayette-red">
+                            <select id="arsenal-filter-status" class="bg-black/80 border border-lafayette-red/40 px-3 py-1.5 rounded text-xs text-lafayette-cyan font-mono focus:outline-none">
+                                <option value="ALL">ALL STATUS</option>
+                                <option value="READY">READY</option>
+                                <option value="ARMED">ARMED</option>
+                                <option value="CHARGING">CHARGING</option>
+                                <option value="STANDBY">STANDBY</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Arsenal Cards Grid -->
+                    <div id="arsenal-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Dynamic Arsenal Cards rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- TAB 4: SUBJECT DOSSIERS -->
+                <section id="tab-subjects" class="tab-content hidden space-y-6">
+                    <div class="border-b border-lafayette-red/30 pb-3 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="font-title text-xl text-lafayette-red font-bold tracking-wider uppercase flex items-center gap-2">
+                                <i class="ph-bold ph-skull"></i> HIGH-VALUE SUBJECT DOSSIERS
+                            </h2>
+                            <p class="text-xs text-gray-400 font-mono">TARGET TRACKING & OPERATIVE STATUS INTELLIGENCE</p>
+                        </div>
+
+                        <!-- Action Bar: Search, Status Filter & Add Subject Button -->
+                        <div class="flex flex-wrap items-center gap-2">
+                            <button id="open-add-subject-btn" class="px-3 py-1.5 bg-lafayette-red/20 hover:bg-lafayette-red/40 border border-lafayette-red text-lafayette-red font-title text-xs font-bold rounded flex items-center gap-1.5 transition">
+                                <i class="ph-bold ph-user-plus text-sm"></i> ADD DOSSIER
+                            </button>
+                            <input type="text" id="subject-search" placeholder="Search target or code..." 
+                                class="bg-black/80 border border-lafayette-red/40 px-3 py-1.5 rounded text-xs text-lafayette-amber font-mono focus:outline-none focus:border-lafayette-red">
+                            <select id="subject-status-filter" class="bg-black/80 border border-lafayette-red/40 px-3 py-1.5 rounded text-xs text-lafayette-cyan font-mono focus:outline-none">
+                                <option value="ALL">ALL TARGETS</option>
+                                <option value="ACTIVE">ACTIVE</option>
+                                <option value="TERMINATED">TERMINATED</option>
+                                <option value="CAPTURED">CAPTURED</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Dossier Cards Grid -->
+                    <div id="subject-dossiers-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        <!-- Dynamic Dossier Cards rendered via JS -->
+                    </div>
+                </section>
+
+                <!-- TAB 5: FINANCIAL ALLOCATION -->
+                <section id="tab-financials" class="tab-content hidden space-y-6">
+                    <div class="border-b border-lafayette-red/30 pb-3 flex flex-wrap items-center justify-between gap-4">
+                        <div>
+                            <h2 class="font-title text-xl text-lafayette-red font-bold tracking-wider uppercase flex items-center gap-2">
+                                <i class="ph-bold ph-currency-dollar"></i> FINANCIAL & RESOURCE ALLOCATION
+                            </h2>
+                            <p class="text-xs text-gray-400 font-mono">BLACK BUDGET FUNDS DISTRIBUTION & OFFSHORE CONDUITS</p>
+                        </div>
+
+                        <div class="bg-black/80 border border-lafayette-amber/50 px-4 py-2 rounded text-right">
+                            <div class="text-[10px] text-gray-400 font-mono">TOTAL CAPITAL POOL</div>
+                            <div class="font-title text-lg text-lafayette-amber font-bold" id="total-capital-display">$14,850,000,000 USD</div>
+                        </div>
+                    </div>
+
+                    <!-- Budget Allocation Sliders & Chart Section -->
+                    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        <!-- Left 2 Cols: Dynamic Allocation Sliders -->
+                        <div class="lg:col-span-2 cyber-card p-5 rounded-lg space-y-6">
+                            <div class="font-title text-sm text-lafayette-cyan uppercase border-b border-lafayette-red/20 pb-2 flex justify-between items-center">
+                                <span>RESOURCE REDISTRIBUTION MATRIX</span>
+                                <span class="text-[10px] text-gray-400 font-mono">INTERACTIVE ADJUSTMENT</span>
+                            </div>
+
+                            <div id="financial-sliders-container" class="space-y-5">
+                                <!-- Dynamic Sliders generated via JS -->
+                            </div>
+
+                            <div class="pt-2 flex justify-end gap-3">
+                                <button id="reset-budget-btn" class="px-4 py-2 bg-gray-900 border border-gray-700 hover:bg-gray-800 text-gray-300 font-mono text-xs rounded transition">
+                                    RESET BALANCES
+                                </button>
+                                <button id="commit-budget-btn" class="px-4 py-2 bg-lafayette-red/20 border border-lafayette-red hover:bg-lafayette-red/40 text-lafayette-red font-title text-xs font-bold rounded transition flex items-center gap-1.5">
+                                    <i class="ph-bold ph-check-circle"></i> COMMIT REALLOCATION
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Right 1 Col: Offshore Ledger Log -->
+                        <div class="cyber-card p-5 rounded-lg flex flex-col justify-between">
+                            <div>
+                                <div class="font-title text-sm text-lafayette-cyan uppercase border-b border-lafayette-red/20 pb-2 mb-4 flex items-center gap-2">
+                                    <i class="ph-bold ph-receipt text-lafayette-amber"></i> RECENT OFFSHORE CONDUITS
+                                </div>
+                                <div class="space-y-3 text-xs font-mono" id="offshore-ledger-list">
+                                    <!-- Dynamic Ledger Items -->
+                                </div>
+                            </div>
+
+                            <div class="mt-6 pt-4 border-t border-gray-800 text-[10px] font-mono text-gray-500">
+                                🔒 ALL TRANSACTIONS ENCRYPTED VIA QUANTUM MESH (256-BIT ROT13 MASKED)
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <!-- 2ND GATE / ADMIN PANEL MODAL -->
+    <div id="admin-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-xl cyber-card p-6 rounded-lg border border-lafayette-amber/60 relative">
+            <button id="close-admin-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                <i class="ph-bold ph-x"></i>
+            </button>
+
+            <!-- Unauthenticated State (Prompt for 2nd Gate Password "RUBICON") -->
+            <div id="admin-gate-prompt" class="space-y-4">
+                <div class="text-center">
+                    <i class="ph-bold ph-shield-warning text-5xl text-lafayette-amber animate-pulse mb-2 inline-block"></i>
+                    <h3 class="font-title text-2xl text-lafayette-amber font-extrabold uppercase glow-cyan-text">
+                        2ND GATE: COMMAND OVERRIDE
+                    </h3>
+                    <p class="text-xs text-gray-400 font-mono mt-1">
+                        LEVEL-5 CLEARANCE REQUIRED FOR DIRECT SYSTEM CONTROL
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-xs text-gray-400 mb-1 font-mono uppercase">Master Admin Security Key</label>
+                    <input type="password" id="admin-password-input" placeholder="ENTER ADMIN KEY (RUBICON)..." 
+                        class="w-full bg-black/90 border border-lafayette-amber/60 text-lafayette-amber px-4 py-3 rounded text-center text-lg font-mono tracking-widest focus:outline-none uppercase">
+                </div>
+
+                <button id="verify-admin-btn" class="w-full bg-lafayette-amber/20 hover:bg-lafayette-amber/40 border border-lafayette-amber text-lafayette-amber font-title py-3 rounded uppercase font-bold tracking-wider transition">
+                    VERIFY OVERRIDE CLEARANCE
+                </button>
+
+                <div id="admin-error-msg" class="hidden text-red-500 text-xs text-center font-mono bg-red-950/40 p-2 rounded border border-red-800">
+                    ACCESS DENIED: INVALID LEVEL-5 OVERRIDE PHRASE
+                </div>
+            </div>
+
+            <!-- Authenticated Admin Control Panel -->
+            <div id="admin-panel-content" class="hidden space-y-5">
+                <div class="border-b border-lafayette-amber/30 pb-3 flex items-center justify-between">
+                    <div>
+                        <h3 class="font-title text-lg text-lafayette-amber font-extrabold flex items-center gap-2">
+                            <i class="ph-bold ph-shield-check text-emerald-400"></i> LEVEL-5 OVERRIDE CONSOLE
+                        </h3>
+                        <p class="text-[11px] text-emerald-400 font-mono">AUTHENTICATED // SYSTEM PURGE & ALARM DIRECTIVES</p>
+                    </div>
+                    <span class="text-[10px] bg-emerald-950 text-emerald-400 border border-emerald-700 px-2 py-1 rounded font-mono">CLEARANCE: MASTER</span>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Alarm Toggle Switch -->
+                    <div class="flex items-center justify-between p-3 bg-black/60 border border-red-900/50 rounded">
+                        <div>
+                            <div class="font-title text-xs text-red-400 font-bold">TACTICAL ALARM SIREN</div>
+                            <div class="text-[10px] text-gray-400 font-mono">Triggers emergency visual & audio alarm sequence</div>
+                        </div>
+                        <button id="toggle-alarm-btn" class="px-4 py-2 bg-red-950 hover:bg-red-900 border border-red-600 text-red-300 font-mono text-xs rounded transition font-bold">
+                            ACTIVATE ALARM
+                        </button>
+                    </div>
+
+                    <!-- Global Threat Status Change -->
+                    <div class="p-3 bg-black/60 border border-amber-900/50 rounded space-y-2">
+                        <div class="font-title text-xs text-lafayette-amber font-bold">SET GLOBAL THREAT STATUS LEVEL</div>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button data-threat="DEFCON 3" class="threat-set-btn p-2 bg-emerald-950/50 border border-emerald-600/50 text-emerald-400 text-xs font-mono rounded hover:bg-emerald-900/50">DEFCON 3</button>
+                            <button data-threat="DEFCON 2" class="threat-set-btn p-2 bg-amber-950/50 border border-amber-600/50 text-amber-400 text-xs font-mono rounded hover:bg-amber-900/50">DEFCON 2</button>
+                            <button data-threat="CODE RED: MAXIMUM" class="threat-set-btn p-2 bg-red-950/50 border border-red-600/50 text-red-400 text-xs font-mono rounded hover:bg-red-900/50">CODE RED</button>
+                        </div>
+                    </div>
+
+                    <!-- Terminal Lockout Directive -->
+                    <button id="trigger-purge-btn" class="w-full p-3 bg-red-600/20 hover:bg-red-600/40 border border-red-600 text-red-400 font-title text-xs font-bold rounded tracking-wider uppercase transition flex items-center justify-center gap-2">
+                        <i class="ph-bold ph-skull"></i> INITIATE SYSTEM PURGE & LOCKOUT
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ADD SUBJECT DOSSIER MODAL -->
+    <div id="add-subject-modal" class="fixed inset-0 z-50 bg-black/90 backdrop-blur-md hidden flex items-center justify-center p-4">
+        <div class="w-full max-w-lg cyber-card p-6 rounded-lg border border-lafayette-red/60 relative">
+            <button id="close-add-subject-modal-btn" class="absolute top-4 right-4 text-gray-400 hover:text-white text-xl">
+                <i class="ph-bold ph-x"></i>
+            </button>
+
+            <div class="font-title text-lg text-lafayette-red font-bold uppercase mb-4 border-b border-lafayette-red/30 pb-2">
+                CREATE NEW SUBJECT DOSSIER
+            </div>
+
+            <form id="add-subject-form" class="space-y-4 font-mono text-xs">
+                <div>
+                    <label class="block text-gray-400 mb-1">TARGET CODENAME / NAME</label>
+                    <input type="text" id="new-sub-name" required placeholder="e.g. Victor Vance" 
+                        class="w-full bg-black/80 border border-lafayette-red/40 px-3 py-2 rounded text-lafayette-amber focus:outline-none">
+                </div>
+
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-gray-400 mb-1">DESIGNATION CODE</label>
+                        <input type="text" id="new-sub-code" required placeholder="e.g. SUB-9902" 
+                            class="w-full bg-black/80 border border-lafayette-red/40 px-3 py-2 rounded text-lafayette-cyan focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-gray-400 mb-1">INITIAL STATUS</label>
+                        <select id="new-sub-status" class="w-full bg-black/80 border border-lafayette-red/40 px-3 py-2 rounded text-lafayette-amber focus:outline-none">
+                            <option value="ACTIVE">ACTIVE</option>
+                            <option value="TERMINATED">TERMINATED</option>
+                            <option value="CAPTURED">CAPTURED</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-gray-400 mb-1">THREAT LEVEL</label>
+                    <select id="new-sub-threat" class="w-full bg-black/80 border border-lafayette-red/40 px-3 py-2 rounded text-red-400 focus:outline-none">
+                        <option value="CRITICAL">CRITICAL</option>
+                        <option value="HIGH">HIGH</option>
+                        <option value="MODERATE">MODERATE</option>
+                        <option value="LOW">LOW</option>
+                    </select>
+                </div>
+
+                <div>
+                    <label class="block text-gray-400 mb-1">DOSSIER INTELLIGENCE SUMMARY</label>
+                    <textarea id="new-sub-bio" rows="3" required placeholder="Brief intelligence background..." 
+                        class="w-full bg-black/80 border border-lafayette-red/40 px-3 py-2 rounded text-gray-300 focus:outline-none"></textarea>
+                </div>
+
+                <button type="submit" class="w-full bg-lafayette-red/20 hover:bg-lafayette-red/40 border border-lafayette-red text-lafayette-red font-title py-2.5 rounded font-bold uppercase transition">
+                    REGISTER TARGET DOSSIER
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Application State
+        const state = {
+            authenticated: false,
+            adminAuthenticated: false,
+            soundEnabled: true,
+            alarmActive: false,
+            activeTab: 'tab-overview',
+            threatLevel: 'CODE RED: MAXIMUM',
+            cad: {
+                selectedModel: 0,
+                rotationAngle: 0,
+                autoRotate: true,
+                zoom: 1.0,
+                wireframe: true
+            },
+            financials: [
+                { id: 'cat-swarm', label: 'Swarm Manufacturing & Assembly', amount: 5500000000, pct: 37 },
+                { id: 'cat-cyber', label: 'Cyber Infrastructure & Exploits', amount: 3800000000, pct: 26 },
+                { id: 'cat-quantum', label: 'Quantum Cryptography Nodes', amount: 2500000000, pct: 17 },
+                { id: 'cat-payroll', label: 'Offshore Operative Bounties', amount: 1850000000, pct: 12 },
+                { id: 'cat-orbital', label: 'Orbital Sat Maintenance', amount: 1200000000, pct: 8 }
+            ],
+            arsenal: [
+                { id: 'ARS-01', name: 'APEX-01 "VALKYRIE" SWARM', type: 'Aerial Strike', status: 'READY', power: 98, desc: 'Automated micro-drone swarm equipped with dual EMP/Kinetic payloads.' },
+                { id: 'ARS-02', name: 'KINETIC-X1 RAIL CANNON', type: 'Orbital Defense', status: 'ARMED', power: 100, desc: 'Hypervelocity electromagnetic launcher with line-of-sight targeting.' },
+                { id: 'ARS-03', name: 'EMP-G3 DISRUPTOR GRID', type: 'Electronic Attack', status: 'CHARGING', power: 64, desc: 'Wide-area pulse generator designed to disable localized energy grids.' },
+                { id: 'ARS-04', name: 'HELIOS SAT MIRROR ARRAY', type: 'Directed Energy', status: 'STANDBY', power: 82, desc: 'Sub-orbital focal laser array for deep precision surface strikes.' },
+                { id: 'ARS-05', name: 'QUANTUM FIREWALL INHIBITOR', type: 'Cyber Warfare', status: 'READY', power: 91, desc: 'Real-time decryptor capable of bypassing high-tier mainframe defenses.' },
+                { id: 'ARS-06', name: 'SUBCRYO CONTAINMENT MATRIX', type: 'Containment', status: 'READY', power: 88, desc: 'Portable localized thermal drop cell for immediate target lockdown.' }
+            ],
+            subjects: [
+                { id: 'SUB-8092', name: 'Dr. Aris Vance', status: 'ACTIVE', threat: 'HIGH', bio: 'Former Lead Quantum Engineer at Aegis Tech. Known holder of Phase IV encryption seeds.' },
+                { id: 'SUB-4411', name: 'Cmdr. Vance Thorne', status: 'ACTIVE', threat: 'CRITICAL', bio: 'Commander of rogue splinter unit opposing Lafayette orbital launch.' },
+                { id: 'SUB-1059', name: 'Elena Rostova', status: 'TERMINATED', threat: 'NEUTRALIZED', bio: 'Covert infiltration agent. Neutralized during Sector 7 comms breach.' },
+                { id: 'SUB-3308', name: 'Marcus Vance', status: 'CAPTURED', threat: 'MODERATE', bio: 'Financial courier intercepted in Geneva conduit node. Under interrogation.' }
+            ],
+            cadModels: [
+                { name: 'LAFAYETTE APEX SWARM DRONE v4', specs: 'Weight: 4.2kg | Range: 1,200km | Propulsion: Dual Plasma Thrust' },
+                { name: 'KINETIC-X1 RAIL DEFENSE TURRET', specs: 'Velocity: Mach 7 | Power: 45MW Pulse | Caliber: 120mm Rod' },
+                { name: 'ORBITAL BEAM RELAY SAT B-12', specs: 'Orbit: LEO 450km | Focal Precision: 0.02m | Core: Fusion Cell' },
+                { name: 'CYBER MESH INTERCEPT NODE', specs: 'Bandwidth: 100 Tbps | Encryption: Q-256 | Array: 12-Blade' }
+            ]
+        };
+
+        // Web Audio API Synth Engine
+        let audioCtx = null;
+
+        function playSound(type) {
+            if (!state.soundEnabled) return;
+            try {
+                if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                if (audioCtx.state === 'suspended') audioCtx.resume();
+
+                const osc = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+                osc.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                const now = audioCtx.currentTime;
+
+                if (type === 'click') {
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(800, now);
+                    osc.frequency.exponentialRampToValueAtTime(400, now + 0.05);
+                    gain.gain.setValueAtTime(0.15, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.05);
+                    osc.start(now);
+                    osc.stop(now + 0.05);
+                } else if (type === 'granted') {
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(440, now);
+                    osc.frequency.setValueAtTime(880, now + 0.1);
+                    gain.gain.setValueAtTime(0.2, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                } else if (type === 'denied') {
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(150, now);
+                    osc.frequency.setValueAtTime(110, now + 0.1);
+                    gain.gain.setValueAtTime(0.3, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.3);
+                    osc.start(now);
+                    osc.stop(now + 0.3);
+                } else if (type === 'terminate') {
+                    osc.type = 'square';
+                    osc.frequency.setValueAtTime(300, now);
+                    osc.frequency.exponentialRampToValueAtTime(60, now + 0.2);
+                    gain.gain.setValueAtTime(0.4, now);
+                    gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+                    osc.start(now);
+                    osc.stop(now + 0.25);
+                }
+            } catch (e) {
+                console.warn('Audio play error', e);
+            }
+        }
+
+        // Authentication Logic (Gate 1 & Gate 2)
+        document.getElementById('login-btn').addEventListener('click', attemptLogin);
+        document.getElementById('password-input').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') attemptLogin();
+        });
+
+        function attemptLogin() {
+            const input = document.getElementById('password-input').value.trim().toUpperCase();
+            if (input === 'LAFAYETTE' || input === 'RUBICON') {
+                playSound('granted');
+                state.authenticated = true;
+                if (input === 'RUBICON') state.adminAuthenticated = true;
+                
+                document.getElementById('login-screen').classList.add('hidden');
+                document.getElementById('main-terminal').classList.remove('hidden');
+                document.getElementById('main-terminal').classList.add('flex');
+                
+                updateAdminBtnUI();
+                initTelemetries();
+                initGlobalMapCanvas();
+                initCadEngine();
+                renderArsenal();
+                renderSubjects();
+                renderFinancials();
+            } else {
+                playSound('denied');
+                const err = document.getElementById('login-error');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 3000);
+            }
+        }
+
+        document.getElementById('logout-btn').addEventListener('click', () => {
+            playSound('click');
+            state.authenticated = false;
+            document.getElementById('password-input').value = '';
+            document.getElementById('main-terminal').classList.add('hidden');
+            document.getElementById('main-terminal').classList.remove('flex');
+            document.getElementById('login-screen').classList.remove('hidden');
+        });
+
+        // Tab Switcher
+        document.querySelectorAll('.nav-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                playSound('click');
+                const targetTab = btn.getAttribute('data-tab');
+                state.activeTab = targetTab;
+
+                document.querySelectorAll('.nav-btn').forEach(b => {
+                    b.classList.remove('active', 'border-lafayette-red/60', 'bg-lafayette-red/20', 'text-lafayette-red');
+                    b.classList.add('border-transparent', 'text-gray-400');
+                });
+
+                btn.classList.add('active', 'border-lafayette-red/60', 'bg-lafayette-red/20', 'text-lafayette-red');
+                btn.classList.remove('border-transparent', 'text-gray-400');
+
+                document.querySelectorAll('.tab-content').forEach(tc => tc.classList.add('hidden'));
+                document.getElementById(targetTab).classList.remove('hidden');
+            });
+        });
+
+        // Audio Toggle
+        document.getElementById('sound-toggle-btn').addEventListener('click', () => {
+            state.soundEnabled = !state.soundEnabled;
+            const icon = document.getElementById('sound-icon');
+            if (state.soundEnabled) {
+                icon.className = 'ph-bold ph-speaker-high text-lg';
+                playSound('click');
+            } else {
+                icon.className = 'ph-bold ph-speaker-slash text-lg text-red-500';
+            }
+        });
+
+        // Admin Gate 2 Modal Controls
+        const adminModal = document.getElementById('admin-modal');
+        document.getElementById('admin-trigger-btn').addEventListener('click', () => {
+            playSound('click');
+            adminModal.classList.remove('hidden');
+            if (state.adminAuthenticated) {
+                document.getElementById('admin-gate-prompt').classList.add('hidden');
+                document.getElementById('admin-panel-content').classList.remove('hidden');
+            } else {
+                document.getElementById('admin-gate-prompt').classList.remove('hidden');
+                document.getElementById('admin-panel-content').classList.add('hidden');
+            }
+        });
+
+        document.getElementById('close-admin-modal-btn').addEventListener('click', () => {
+            adminModal.classList.add('hidden');
+        });
+
+        document.getElementById('verify-admin-btn').addEventListener('click', () => {
+            const val = document.getElementById('admin-password-input').value.trim().toUpperCase();
+            if (val === 'RUBICON') {
+                playSound('granted');
+                state.adminAuthenticated = true;
+                updateAdminBtnUI();
+                document.getElementById('admin-gate-prompt').classList.add('hidden');
+                document.getElementById('admin-panel-content').classList.remove('hidden');
+            } else {
+                playSound('denied');
+                const err = document.getElementById('admin-error-msg');
+                err.classList.remove('hidden');
+                setTimeout(() => err.classList.add('hidden'), 3000);
+            }
+        });
+
+        function updateAdminBtnUI() {
+            const btn = document.getElementById('admin-btn-label');
+            const icon = document.getElementById('admin-lock-icon');
+            if (state.adminAuthenticated) {
+                btn.textContent = 'ADMIN ONLINE';
+                btn.classList.add('text-emerald-400');
+                icon.className = 'ph-bold ph-lock-key-open text-emerald-400';
+            }
+        }
+
+        // Alarm Toggle
+        document.getElementById('toggle-alarm-btn').addEventListener('click', () => {
+            state.alarmActive = !state.alarmActive;
+            const body = document.getElementById('app-body');
+            const btn = document.getElementById('toggle-alarm-btn');
+
+            if (state.alarmActive) {
+                body.classList.add('alarm-mode');
+                btn.textContent = 'DEACTIVATE ALARM';
+                playSound('denied');
+            } else {
+                body.classList.remove('alarm-mode');
+                btn.textContent = 'ACTIVATE ALARM';
+                playSound('click');
+            }
+        });
+
+        // Threat Set Buttons
+        document.querySelectorAll('.threat-set-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const threat = btn.getAttribute('data-threat');
+                state.threatLevel = threat;
+                playSound('click');
+                document.getElementById('threat-level-badge').innerHTML = `
+                    <span class="w-2.5 h-2.5 rounded-full bg-red-600 animate-ping"></span>
+                    ${threat}
+                `;
+            });
+        });
+
+        document.getElementById('trigger-purge-btn').addEventListener('click', () => {
+            playSound('terminate');
+            alert('SYSTEM PURGE INITIATED. ALL SESSIONS TERMINATED.');
+            location.reload();
+        });
+
+        // Global Master Countdown Timer - Fixed Target Timestamp
+        const targetDate = new Date('2026-10-01T00:00:00Z').getTime();
+
+        setInterval(() => {
+            const now = new Date().getTime();
+            const diff = Math.max(0, targetDate - now);
+
+            const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const mins = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+            const secs = Math.floor((diff % (1000 * 60)) / 1000);
+
+            const pD = String(days).padStart(2, '0');
+            const pH = String(hours).padStart(2, '0');
+            const pM = String(mins).padStart(2, '0');
+            const pS = String(secs).padStart(2, '0');
+
+            document.getElementById('cnt-days').textContent = pD;
+            document.getElementById('cnt-hours').textContent = pH;
+            document.getElementById('cnt-mins').textContent = pM;
+            document.getElementById('cnt-secs').textContent = pS;
+
+            document.getElementById('header-countdown').textContent = `${pD}d ${pH}h ${pM}m ${pS}s`;
+        }, 1000);
+
+        // System Telemetry Logs Generator
+        const sampleLogs = [
+            'SAT_NODE_9: Telemetry sync established (Ping: 12ms)',
+            'SWARM_UNIT_42: Rotor array self-diagnostic PASSED',
+            'ENCRYPTION: Quantum key rotated successfully',
+            'CONDUIT_GENEVA: $450,000 USD transferred to Operative B-7',
+            'RADAR_SWEEP: 12 new low-orbit contact signatures detected',
+            'ARSENAL_APEX-01: Auto-arm sequence primed for Phase IV',
+            'GRID_OVERRIDE: Substation 14 bypassed via quantum exploit'
+        ];
+
+        function initTelemetries() {
+            const container = document.getElementById('telemetry-log');
+            sampleLogs.forEach(log => addLogMessage(log));
+
+            setInterval(() => {
+                const randomMsg = sampleLogs[Math.floor(Math.random() * sampleLogs.length)];
+                const time = new Date().toISOString().substring(11, 19);
+                addLogMessage(`[${time}] ${randomMsg}`);
+            }, 3500);
+        }
+
+        function addLogMessage(msg) {
+            const container = document.getElementById('telemetry-log');
+            const div = document.createElement('div');
+            div.className = 'text-gray-400 border-l border-lafayette-red/40 pl-2 py-0.5 hover:text-lafayette-cyan transition';
+            div.textContent = msg;
+            container.appendChild(div);
+            container.scrollTop = container.scrollHeight;
+        }
+
+        // Global Tactical World Map Canvas
+        function initGlobalMapCanvas() {
+            const canvas = document.getElementById('global-map-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            let angle = 0;
+            const nodes = [
+                { x: 0.25, y: 0.35, label: 'SECTOR_1' },
+                { x: 0.52, y: 0.28, label: 'SECTOR_4' },
+                { x: 0.75, y: 0.65, label: 'SECTOR_8' },
+                { x: 0.35, y: 0.70, label: 'SECTOR_2' },
+                { x: 0.82, y: 0.30, label: 'SECTOR_9' }
+            ];
+
+            function drawMap() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Grid background
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.08)';
+                ctx.lineWidth = 1;
+                const gridSize = 30;
+                for (let x = 0; x < canvas.width; x += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height);
+                    ctx.stroke();
+                }
+                for (let y = 0; y < canvas.height; y += gridSize) {
+                    ctx.beginPath();
+                    ctx.moveTo(0, y); ctx.lineTo(canvas.width, y);
+                    ctx.stroke();
+                }
+
+                // Draw Nodes & Connection Lines
+                ctx.strokeStyle = 'rgba(255, 42, 0, 0.25)';
+                ctx.beginPath();
+                nodes.forEach((n, idx) => {
+                    const nx = n.x * canvas.width;
+                    const ny = n.y * canvas.height;
+                    if (idx === 0) ctx.moveTo(nx, ny);
+                    else ctx.lineTo(nx, ny);
+                });
+                ctx.stroke();
+
+                nodes.forEach(n => {
+                    const nx = n.x * canvas.width;
+                    const ny = n.y * canvas.height;
+
+                    ctx.fillStyle = '#ff2a00';
+                    ctx.beginPath();
+                    ctx.arc(nx, ny, 4, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#00f0ff';
+                    ctx.beginPath();
+                    ctx.arc(nx, ny, 8 + Math.sin(Date.now() * 0.005) * 3, 0, Math.PI * 2);
+                    ctx.stroke();
+
+                    ctx.fillStyle = '#00f0ff';
+                    ctx.font = '9px Share Tech Mono';
+                    ctx.fillText(n.label, nx + 10, ny + 3);
+                });
+
+                // Radar Sweeping Line
+                const cx = canvas.width / 2;
+                const cy = canvas.height / 2;
+                const radius = Math.max(canvas.width, canvas.height);
+
+                angle += 0.02;
+                const sweepX = cx + Math.cos(angle) * radius;
+                const sweepY = cy + Math.sin(angle) * radius;
+
+                ctx.strokeStyle = 'rgba(255, 42, 0, 0.4)';
+                ctx.lineWidth = 2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy);
+                ctx.lineTo(sweepX, sweepY);
+                ctx.stroke();
+
+                requestAnimationFrame(drawMap);
+            }
+            drawMap();
+        }
+
+        // 3D Blueprint CAD Viewer Engine
+        function initCadEngine() {
+            const canvas = document.getElementById('blueprint-canvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+
+            function resize() {
+                canvas.width = canvas.parentElement.clientWidth;
+                canvas.height = canvas.parentElement.clientHeight;
+            }
+            resize();
+            window.addEventListener('resize', resize);
+
+            // Render Blueprint list selector
+            const selectorContainer = document.getElementById('blueprint-selector-container');
+            selectorContainer.innerHTML = '';
+            state.cadModels.forEach((m, idx) => {
+                const btn = document.createElement('button');
+                btn.className = `w-full text-left p-2.5 rounded font-mono text-xs border ${idx === state.cad.selectedModel ? 'bg-cyan-900/50 border-cyan-400 text-cyan-300' : 'bg-black/50 border-cyan-900/40 text-gray-400 hover:border-cyan-600'}`;
+                btn.textContent = `[0${idx + 1}] ${m.name.split(' ')[0]} ${m.name.split(' ')[1]}`;
+                btn.addEventListener('click', () => {
+                    playSound('click');
+                    state.cad.selectedModel = idx;
+                    initCadEngine();
+                });
+                selectorContainer.appendChild(btn);
+            });
+
+            // Update Header Display
+            const activeModel = state.cadModels[state.cad.selectedModel];
+            document.getElementById('cad-title-display').textContent = `MODEL: ${activeModel.name}`;
+            document.getElementById('cad-specs-callout').innerHTML = `
+                <div class="font-bold text-cyan-400 mb-1">SPECIFICATIONS:</div>
+                <div>${activeModel.specs}</div>
+            `;
+
+            // Setup CAD 3D Projection Mesh
+            const points = [
+                { x: -1, y: -1, z: -1 }, { x: 1, y: -1, z: -1 },
+                { x: 1, y: 1, z: -1 }, { x: -1, y: 1, z: -1 },
+                { x: -1, y: -1, z: 1 }, { x: 1, y: -1, z: 1 },
+                { x: 1, y: 1, z: 1 }, { x: -1, y: 1, z: 1 },
+                { x: 0, y: -2, z: 0 }, { x: 0, y: 2, z: 0 } // Extra apex points
+            ];
+
+            const edges = [
+                [0,1],[1,2],[2,3],[3,0],
+                [4,5],[5,6],[6,7],[7,4],
+                [0,4],[1,5],[2,6],[3,7],
+                [0,8],[1,8],[4,8],[5,8],
+                [2,9],[3,9],[6,9],[7,9]
+            ];
+
+            function project(p, angleY, zoom) {
+                const cos = Math.cos(angleY);
+                const sin = Math.sin(angleY);
+
+                // Rotate around Y-axis
+                const rx = p.x * cos - p.z * sin;
+                const rz = p.x * sin + p.z * cos;
+
+                const distance = 4;
+                const fov = 180 * zoom;
+                const scale = fov / (distance + rz);
+
+                return {
+                    x: canvas.width / 2 + rx * scale,
+                    y: canvas.height / 2 + p.y * scale
+                };
+            }
+
+            function renderCad() {
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+                // Blueprint Grid
+                ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+                ctx.lineWidth = 1;
+                for (let x = 0; x < canvas.width; x += 20) {
+                    ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+                }
+                for (let y = 0; y < canvas.height; y += 20) {
+                    ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+                }
+
+                if (state.cad.autoRotate) {
+                    state.cad.rotationAngle += 0.015;
+                }
+
+                const deg = Math.floor((state.cad.rotationAngle * (180 / Math.PI)) % 360);
+                document.getElementById('cad-deg-readout').textContent = `${deg}°`;
+                document.getElementById('cad-zoom-readout').textContent = `${Math.floor(state.cad.zoom * 100)}%`;
+
+                // Render Edges
+                ctx.strokeStyle = '#00f0ff';
+                ctx.lineWidth = 1.5;
+
+                edges.forEach(edge => {
+                    const p1 = project(points[edge[0]], state.cad.rotationAngle, state.cad.zoom);
+                    const p2 = project(points[edge[1]], state.cad.rotationAngle, state.cad.zoom);
+
+                    ctx.beginPath();
+                    ctx.moveTo(p1.x, p1.y);
+                    ctx.lineTo(p2.x, p2.y);
+                    ctx.stroke();
+                });
+
+                // Render Vertices
+                points.forEach(p => {
+                    const proj = project(p, state.cad.rotationAngle, state.cad.zoom);
+                    ctx.fillStyle = '#ffaa00';
+                    ctx.fillRect(proj.x - 2, proj.y - 2, 4, 4);
+                });
+
+                requestAnimationFrame(renderCad);
+            }
+            renderCad();
+        }
+
+        // CAD Controls Bindings
+        document.getElementById('cad-zoom-in').addEventListener('click', () => {
+            state.cad.zoom = Math.min(2.5, state.cad.zoom + 0.2);
+            playSound('click');
+        });
+        document.getElementById('cad-zoom-out').addEventListener('click', () => {
+            state.cad.zoom = Math.max(0.4, state.cad.zoom - 0.2);
+            playSound('click');
+        });
+        document.getElementById('cad-toggle-rotate').addEventListener('click', (e) => {
+            state.cad.autoRotate = !state.cad.autoRotate;
+            e.target.textContent = `AUTO-ROTATE: ${state.cad.autoRotate ? 'ON' : 'OFF'}`;
+            playSound('click');
+        });
+
+        // Classified Arsenal Rendering & Actions
+        function renderArsenal() {
+            const grid = document.getElementById('arsenal-grid');
+            const search = document.getElementById('arsenal-search').value.toLowerCase();
+            const filter = document.getElementById('arsenal-filter-status').value;
+
+            grid.innerHTML = '';
+
+            const filtered = state.arsenal.filter(item => {
+                const matchSearch = item.name.toLowerCase().includes(search) || item.id.toLowerCase().includes(search);
+                const matchStatus = filter === 'ALL' || item.status === filter;
+                return matchSearch && matchStatus;
+            });
+
+            filtered.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'cyber-card p-5 rounded-lg flex flex-col justify-between space-y-4';
+                
+                const statusColor = item.status === 'READY' ? 'text-emerald-400 border-emerald-500/50 bg-emerald-950/40' :
+                                   item.status === 'ARMED' ? 'text-red-500 border-red-500/50 bg-red-950/40' :
+                                   'text-amber-400 border-amber-500/50 bg-amber-950/40';
+
+                card.innerHTML = `
+                    <div>
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-[10px] font-mono text-gray-400">${item.id} // ${item.type}</span>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${statusColor}">${item.status}</span>
+                        </div>
+                        <h3 class="font-title text-base font-bold text-lafayette-red tracking-wider mb-2">${item.name}</h3>
+                        <p class="text-xs text-gray-400 font-mono mb-4">${item.desc}</p>
+                    </div>
+
+                    <div class="space-y-3">
+                        <div>
+                            <div class="flex justify-between text-[10px] font-mono text-gray-400 mb-1">
+                                <span>POWER / CHARGE LEVEL</span>
+                                <span>${item.power}%</span>
+                            </div>
+                            <div class="w-full h-2 bg-black border border-lafayette-red/30 rounded overflow-hidden">
+                                <div class="h-full bg-lafayette-red" style="width: ${item.power}%"></div>
+                            </div>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button onclick="toggleArmUnit('${item.id}')" class="flex-1 py-1.5 bg-lafayette-red/20 border border-lafayette-red hover:bg-lafayette-red/40 text-lafayette-red font-mono text-xs rounded transition">
+                                ${item.status === 'ARMED' ? 'DISARM UNIT' : 'ARM SYSTEM'}
+                            </button>
+                            <button onclick="testFireUnit('${item.id}')" class="px-3 py-1.5 bg-gray-900 border border-gray-700 hover:bg-gray-800 text-gray-300 font-mono text-xs rounded transition">
+                                TEST FIRE
+                            </button>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        document.getElementById('arsenal-search').addEventListener('input', renderArsenal);
+        document.getElementById('arsenal-filter-status').addEventListener('change', renderArsenal);
+
+        window.toggleArmUnit = function(id) {
+            playSound('click');
+            const unit = state.arsenal.find(a => a.id === id);
+            if (unit) {
+                unit.status = unit.status === 'ARMED' ? 'READY' : 'ARMED';
+                renderArsenal();
+            }
+        };
+
+        window.testFireUnit = function(id) {
+            playSound('terminate');
+            alert(`[TEST FIRE INITIATED]: ${id} payload discharge simulated.`);
+        };
+
+        // Subject Dossiers Logic
+        function renderSubjects() {
+            const grid = document.getElementById('subject-dossiers-grid');
+            const search = document.getElementById('subject-search').value.toLowerCase();
+            const filter = document.getElementById('subject-status-filter').value;
+
+            grid.innerHTML = '';
+
+            const filtered = state.subjects.filter(s => {
+                const matchSearch = s.name.toLowerCase().includes(search) || s.id.toLowerCase().includes(search);
+                const matchStatus = filter === 'ALL' || s.status === filter;
+                return matchSearch && matchStatus;
+            });
+
+            filtered.forEach(s => {
+                const card = document.createElement('div');
+                card.className = 'cyber-card p-5 rounded-lg relative overflow-hidden flex flex-col justify-between space-y-4';
+
+                const isTerminated = s.status === 'TERMINATED';
+
+                card.innerHTML = `
+                    ${isTerminated ? `
+                        <div class="absolute inset-0 flex items-center justify-center pointer-events-none z-20">
+                            <div class="terminated-stamp font-title font-black text-2xl tracking-widest px-4 py-2 uppercase">
+                                TERMINATED
+                            </div>
+                        </div>
+                    ` : ''}
+
+                    <div class="relative z-10">
+                        <div class="flex items-center justify-between mb-3 border-b border-lafayette-red/20 pb-2">
+                            <span class="text-xs font-mono text-lafayette-cyan">${s.id}</span>
+                            <span class="text-[10px] font-mono px-2 py-0.5 rounded border ${isTerminated ? 'border-red-600 text-red-500 bg-red-950/40' : 'border-emerald-600 text-emerald-400 bg-emerald-950/40'}">${s.status}</span>
+                        </div>
+
+                        <h3 class="font-title text-lg font-extrabold text-gray-100 tracking-wide mb-1">${s.name}</h3>
+                        <div class="text-[10px] text-red-400 font-mono mb-3 uppercase">THREAT ASSESSED: ${s.threat}</div>
+                        <p class="text-xs text-gray-400 font-mono leading-relaxed mb-4">${s.bio}</p>
+                    </div>
+
+                    <div class="relative z-10 flex gap-2 pt-2 border-t border-gray-800">
+                        ${!isTerminated ? `
+                            <button onclick="terminateSubject('${s.id}')" class="flex-1 py-1.5 bg-red-600/20 hover:bg-red-600/40 border border-red-600 text-red-400 font-title text-xs font-bold rounded transition">
+                                EXECUTE TERMINATION
+                            </button>
+                        ` : `
+                            <button onclick="reinstateSubject('${s.id}')" class="flex-1 py-1.5 bg-emerald-600/20 hover:bg-emerald-600/40 border border-emerald-600 text-emerald-400 font-title text-xs font-bold rounded transition">
+                                REINSTATE SUBJECT
+                            </button>
+                        `}
+                    </div>
+                `;
+                grid.appendChild(card);
+            });
+        }
+
+        document.getElementById('subject-search').addEventListener('input', renderSubjects);
+        document.getElementById('subject-status-filter').addEventListener('change', renderSubjects);
+
+        window.terminateSubject = function(id) {
+            playSound('terminate');
+            const sub = state.subjects.find(s => s.id === id);
+            if (sub) {
+                sub.status = 'TERMINATED';
+                sub.threat = 'NEUTRALIZED';
+                renderSubjects();
+            }
+        };
+
+        window.reinstateSubject = function(id) {
+            playSound('granted');
+            const sub = state.subjects.find(s => s.id === id);
+            if (sub) {
+                sub.status = 'ACTIVE';
+                sub.threat = 'HIGH';
+                renderSubjects();
+            }
+        };
+
+        // Add Subject Modal triggers
+        const addSubModal = document.getElementById('add-subject-modal');
+        document.getElementById('open-add-subject-btn').addEventListener('click', () => {
+            playSound('click');
+            addSubModal.classList.remove('hidden');
+        });
+        document.getElementById('close-add-subject-modal-btn').addEventListener('click', () => {
+            addSubModal.classList.add('hidden');
+        });
+
+        document.getElementById('add-subject-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            playSound('granted');
+
+            const name = document.getElementById('new-sub-name').value;
+            const code = document.getElementById('new-sub-code').value;
+            const status = document.getElementById('new-sub-status').value;
+            const threat = document.getElementById('new-sub-threat').value;
+            const bio = document.getElementById('new-sub-bio').value;
+
+            state.subjects.unshift({ id: code, name, status, threat, bio });
+            renderSubjects();
+
+            addSubModal.classList.add('hidden');
+            document.getElementById('add-subject-form').reset();
+        });
+
+        // Financials Allocation Logic
+        function renderFinancials() {
+            const container = document.getElementById('financial-sliders-container');
+            container.innerHTML = '';
+
+            state.financials.forEach(item => {
+                const div = document.createElement('div');
+                div.className = 'space-y-1';
+                div.innerHTML = `
+                    <div class="flex justify-between text-xs font-mono">
+                        <span class="text-gray-300">${item.label}</span>
+                        <span class="text-lafayette-amber font-bold">$${(item.amount / 1000000).toFixed(0)}M USD (${item.pct}%)</span>
+                    </div>
+                    <input type="range" min="0" max="100" value="${item.pct}" 
+                        oninput="updateBudgetSlider('${item.id}', this.value)"
+                        class="w-full accent-lafayette-red bg-black border border-gray-800 rounded h-2 cursor-pointer">
+                `;
+                container.appendChild(div);
+            });
+
+            renderOffshoreLedger();
+        }
+
+        window.updateBudgetSlider = function(id, value) {
+            const item = state.financials.find(f => f.id === id);
+            if (item) {
+                item.pct = parseInt(value);
+                item.amount = (14850000000 * (item.pct / 100));
+                renderFinancials();
+            }
+        };
+
+        document.getElementById('reset-budget-btn').addEventListener('click', () => {
+            playSound('click');
+            state.financials = [
+                { id: 'cat-swarm', label: 'Swarm Manufacturing & Assembly', amount: 5500000000, pct: 37 },
+                { id: 'cat-cyber', label: 'Cyber Infrastructure & Exploits', amount: 3800000000, pct: 26 },
+                { id: 'cat-quantum', label: 'Quantum Cryptography Nodes', amount: 2500000000, pct: 17 },
+                { id: 'cat-payroll', label: 'Offshore Operative Bounties', amount: 1850000000, pct: 12 },
+                { id: 'cat-orbital', label: 'Orbital Sat Maintenance', amount: 1200000000, pct: 8 }
+            ];
+            renderFinancials();
+        });
+
+        document.getElementById('commit-budget-btn').addEventListener('click', () => {
+            playSound('granted');
+            alert('FINANCIAL ALLOCATION COMMITTED TO QUANTUM MESH LEDGER.');
+        });
+
+        function renderOffshoreLedger() {
+            const list = document.getElementById('offshore-ledger-list');
+            list.innerHTML = `
+                <div class="flex justify-between border-b border-gray-800 pb-1 text-gray-400">
+                    <span>CONDUIT: GENEVA_04</span>
+                    <span class="text-emerald-400">+$250,000,000</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-800 pb-1 text-gray-400">
+                    <span>CONDUIT: CAYMAN_PRIME</span>
+                    <span class="text-red-400">-$120,000,000</span>
+                </div>
+                <div class="flex justify-between border-b border-gray-800 pb-1 text-gray-400">
+                    <span>CONDUIT: TOKYO_SHELL</span>
+                    <span class="text-emerald-400">+$85,000,000</span>
+                </div>
+            `;
+        }
+    </script>
+</body>
+</html>
