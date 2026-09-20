@@ -643,6 +643,29 @@
                         </div>
                     </div>
 
+                    <!-- Launch Delay / Time Increaser Control -->
+                    <div class="p-3 bg-black/60 border border-cyan-900/50 rounded space-y-2">
+                        <div class="font-title text-xs text-lafayette-cyan font-bold flex items-center justify-between">
+                            <span>EXTEND LAUNCH DELAY (TIME INCREASER)</span>
+                            <i class="ph-bold ph-hourglass-high text-lafayette-cyan"></i>
+                        </div>
+                        <div class="text-[10px] text-gray-400 font-mono">Inject additional delay time to extend Phase IV launch countdown</div>
+                        <div class="grid grid-cols-4 gap-2 pt-1">
+                            <button onclick="addDelayTime(1)" class="p-2 bg-cyan-950/50 border border-cyan-600/50 text-cyan-300 text-xs font-mono rounded hover:bg-cyan-900/50 transition flex flex-col items-center">
+                                <span class="font-bold">+1 DAY</span>
+                            </button>
+                            <button onclick="addDelayTime(7)" class="p-2 bg-cyan-950/50 border border-cyan-600/50 text-cyan-300 text-xs font-mono rounded hover:bg-cyan-900/50 transition flex flex-col items-center">
+                                <span class="font-bold">+7 DAYS</span>
+                            </button>
+                            <button onclick="addDelayTime(30)" class="p-2 bg-cyan-950/50 border border-cyan-600/50 text-cyan-300 text-xs font-mono rounded hover:bg-cyan-900/50 transition flex flex-col items-center">
+                                <span class="font-bold">+30 DAYS</span>
+                            </button>
+                            <button onclick="addDelayTime(365)" class="p-2 bg-amber-950/50 border border-amber-600/50 text-amber-300 text-xs font-mono rounded hover:bg-amber-900/50 transition flex flex-col items-center">
+                                <span class="font-bold">+1 YEAR</span>
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Terminal Lockout Directive -->
                     <button id="trigger-purge-btn" class="w-full p-3 bg-red-600/20 hover:bg-red-600/40 border border-red-600 text-red-400 font-title text-xs font-bold rounded tracking-wider uppercase transition flex items-center justify-center gap-2">
                         <i class="ph-bold ph-skull"></i> INITIATE SYSTEM PURGE & LOCKOUT
@@ -961,8 +984,17 @@
             location.reload();
         });
 
-        // Global Master Countdown Timer - Fixed Target Timestamp
-        const targetDate = new Date('2026-10-01T00:00:00Z').getTime();
+        // Global Master Countdown Timer - Target Timestamp
+        let targetDate = new Date('2026-10-01T00:00:00Z').getTime();
+
+        window.addDelayTime = function(daysToAdd) {
+            playSound('granted');
+            targetDate += daysToAdd * 24 * 60 * 60 * 1000;
+            if (typeof addLogMessage === 'function') {
+                const logTime = new Date().toISOString().substring(11, 19);
+                addLogMessage(`[${logTime}] ADMIN_OVERRIDE: Launch delayed by +${daysToAdd} day(s).`);
+            }
+        };
 
         setInterval(() => {
             const now = new Date().getTime();
